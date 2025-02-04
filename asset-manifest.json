@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/SquatsSimulator/static/css/main.803fe3a1.css",
-    "main.js": "/SquatsSimulator/static/js/main.3823106f.js",
+    "main.js": "/SquatsSimulator/static/js/main.9cb01d6d.js",
     "static/js/488.1539e19b.chunk.js": "/SquatsSimulator/static/js/488.1539e19b.chunk.js",
     "index.html": "/SquatsSimulator/index.html",
     "main.803fe3a1.css.map": "/SquatsSimulator/static/css/main.803fe3a1.css.map",
-    "main.3823106f.js.map": "/SquatsSimulator/static/js/main.3823106f.js.map",
+    "main.9cb01d6d.js.map": "/SquatsSimulator/static/js/main.9cb01d6d.js.map",
     "488.1539e19b.chunk.js.map": "/SquatsSimulator/static/js/488.1539e19b.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.803fe3a1.css",
-    "static/js/main.3823106f.js"
+    "static/js/main.9cb01d6d.js"
   ]
 }
