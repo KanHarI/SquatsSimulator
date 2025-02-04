@@ -1,37 +1,40 @@
 import React, { useState, useRef } from 'react';
 
 const SquatSimulator = () => {
-  // Compute initial values once and store them in a ref.
-  // This preserves the original configuration for scaling purposes.
+  // Compute initial values once and store them.
+  // These values serve as a fallback if no drag is in progress.
   const initialValues = useRef((() => {
     const initial = {
       thighAngle: 95,      // degrees from vertical
       shinAngle: 45,       // degrees from vertical
-      torsoLength: 0.52,   // meters
-      femurLength: 0.45,   // meters
-      shinLength: 0.43,    // meters
-      feetLength: 0.25     // meters
+      torsoLength: 0.50,   // meters
+      femurLength: 0.48,   // meters
+      shinLength: 0.41,    // meters
+      feetLength: 0.24     // meters
     };
-    const psi0 = -initial.shinAngle * Math.PI / 180; // initial shin angle (radians)
-    const phi = initial.thighAngle * Math.PI / 180;    // thigh angle (radians)
+    const psi0 = -initial.shinAngle * Math.PI / 180;
+    const phi = initial.thighAngle * Math.PI / 180;
     const ratio0 = (-initial.feetLength / 2 
                     - initial.shinLength * Math.sin(psi0)
-                    - initial.femurLength * Math.sin(phi))
+                    - initial.femurLength * Math.sin(phi)) 
                     / initial.torsoLength;
     const theta0 = Math.asin(Math.max(-1, Math.min(1, ratio0)));
-    // Overall initial height (vertical distance from ankle to torso top)
-    const H0 = initial.shinLength * Math.cos(psi0)
-             + initial.femurLength * Math.cos(phi)
-             + initial.torsoLength * Math.cos(theta0);
-    // Preserve the torso and shin lengths as originally specified
+    // Overall initial "shoulder height" (standing): sum of segments
+    const H0 = initial.shinLength + initial.femurLength + initial.torsoLength;
+    // Preserve original torso and shin lengths
     const T0 = initial.torsoLength;
     const S0 = initial.shinLength;
-    // Preserve the ratio between shin angle and back angle (in degrees)
-    const R_shin = initial.shinAngle / Math.abs(theta0 * (180 / Math.PI));
+    // Fixed ratio between shin angle and back angle (in degrees)
+    const R_shin = initial.shinAngle / Math.abs(theta0 * (180/Math.PI));
     return { ...initial, psi0, phi, theta0, H0, T0, S0, R_shin };
   })());
 
-  // --- STATE ---
+  // We'll use these refs to store fixed ratios while dragging the femur slider.
+  const femurDragRatio = useRef(null);       // (shin angle)/(back angle) fixed during drag
+  const femurDragTSRatio = useRef(null);       // torsoLength/shinLength fixed during drag
+  const femurDragShoulderHeight = useRef(null); // standing shoulder height fixed during drag
+
+  // State holds the current parameters.
   const [parameters, setParameters] = useState({
     thighAngle: initialValues.current.thighAngle,
     shinAngle: initialValues.current.shinAngle,
@@ -41,41 +44,57 @@ const SquatSimulator = () => {
     feetLength: initialValues.current.feetLength
   });
 
-  // --- UPDATE FUNCTION ---
+  // Update function.
+  // For femurLength, we adjust torsoLength, shinLength, and shinAngle so that:
+  //   (i) the ratio (shinAngle)/(backAngle) remains fixed,
+  //   (ii) the ratio torsoLength/shinLength remains fixed, and
+  //   (iii) the standing shoulder height (shinLength+femurLength+torsoLength) remains constant.
   const updateParameter = (key, value) => {
     const numValue = Number(value);
     if (key === "femurLength") {
-      // When femur length changes, update femurLength as well as torsoLength, shinLength, and shinAngle.
       const newFemur = numValue;
-      const { psi0, phi, T0, S0, H0, theta0, R_shin, feetLength } = initialValues.current;
-      // Preserve overall height H0.
-      // With unchanged thigh angle, the femur’s vertical contribution is newFemur * cos(phi).
-      // Let the scaling factor k update the torso and shin lengths:
-      const denominator = (S0 * Math.cos(psi0) + T0 * Math.cos(theta0));
-      const k = (H0 - newFemur * Math.cos(phi)) / denominator;
-      const newTorso = T0 * k;
-      const newShin = S0 * k;
+      const { phi } = initialValues.current; // thigh angle (radians) is assumed constant
+      const feetLength = parameters.feetLength; // assume feetLength is unchanged
 
-      // Update the shin angle so that its ratio to the back angle remains constant.
-      // The balance equation for the back (torso) angle (theta) is:
-      //    ratio = (-feetLength/2 - newShin*sin(psi_new) - newFemur*sin(phi)) / newTorso,
-      // with psi_new = -newShinAngle*(pi/180).
-      // We require:
-      //    newShinAngle = R_shin * |theta (in degrees)|
-      // Solve this via fixed-point iteration:
-      const solveShinAngle = (x_init) => {
-        let x = x_init;
-        for (let i = 0; i < 10; i++) {
-          const psi_new = -x * Math.PI / 180;
-          const val = (-feetLength / 2 - newShin * Math.sin(psi_new) - newFemur * Math.sin(phi)) / newTorso;
-          const clamped = Math.max(-1, Math.min(1, val));
-          const theta_new = Math.asin(clamped); // theta in radians (likely negative)
-          const x_new = R_shin * Math.abs(theta_new * (180 / Math.PI));
-          x = x_new;
-        }
-        return x;
-      };
-      const newShinAngle = solveShinAngle(parameters.shinAngle);
+      // If the femur drag fixed numbers have not been captured, use initial values.
+      const R_fixed = femurDragRatio.current !== null
+                        ? femurDragRatio.current
+                        : initialValues.current.R_shin;
+      const TS_fixed = femurDragTSRatio.current !== null
+                        ? femurDragTSRatio.current
+                        : (initialValues.current.T0 / initialValues.current.S0);
+      const H_fixed = femurDragShoulderHeight.current !== null
+                        ? femurDragShoulderHeight.current
+                        : initialValues.current.H0;
+
+      // We'll solve for new shin length, new torso length, and new shin angle
+      // such that:
+      // (1) newTorso / newShin = TS_fixed,
+      // (2) newShinAngle = R_fixed * |backAngle (in °)|, where
+      //     backAngle = θ = asin( (-feetLength/2 - newShin*sin(psi_new) - newFemur*sin(phi)) / newTorso ),
+      //     with psi_new = -newShinAngle*(π/180), and
+      // (3) newShin + newFemur + newTorso equals H_fixed.
+      //
+      // We use fixed-point iteration. Initialize:
+      let newShinAngle = parameters.shinAngle;
+      let newShin = parameters.shinLength;
+      let newTorso = TS_fixed * newShin; // from (1)
+      let theta_candidate = 0;
+      for (let i = 0; i < 10; i++) {
+        const psi_new = - newShinAngle * Math.PI / 180;
+        newTorso = TS_fixed * newShin;
+        const expr = (-feetLength / 2 - newShin * Math.sin(psi_new) - newFemur * Math.sin(phi)) / newTorso;
+        const clampedExpr = Math.max(-1, Math.min(1, expr));
+        theta_candidate = Math.asin(clampedExpr); // back (torso) angle (radians)
+        const newShinAngle_new = R_fixed * Math.abs(theta_candidate * (180/Math.PI));
+        // Compute current shoulder height candidate (standing height = sum of lengths).
+        const H_candidate = newShin + newFemur + newTorso;
+        // Scale newShin so that the shoulder height approaches H_fixed.
+        const scale = H_fixed / H_candidate;
+        newShin = newShin * scale;
+        newShinAngle = newShinAngle_new;
+      }
+      newTorso = TS_fixed * newShin; // final update
 
       setParameters(prev => ({
         ...prev,
@@ -90,21 +109,27 @@ const SquatSimulator = () => {
   };
 
   // --- CALCULATIONS ---
-  // Compute angles (in radians) from current state.
+  // Compute angles (radians) from current state.
   const phi = (parameters.thighAngle * Math.PI) / 180;
   const psi = (-parameters.shinAngle * Math.PI) / 180;
   const ratio =
-    (-parameters.feetLength / 2
-     - parameters.shinLength * Math.sin(psi)
-     - parameters.femurLength * Math.sin(phi)) /
+    (-parameters.feetLength / 2 -
+     parameters.shinLength * Math.sin(psi) -
+     parameters.femurLength * Math.sin(phi)) /
     parameters.torsoLength;
-  // Compute the back (torso) angle (in radians). It is likely negative due to the geometry.
   const thetaRadRaw = Math.asin(Math.max(-1, Math.min(1, ratio)));
-  // For display, show the absolute value (positive) of the back angle.
+  // For display, use the absolute back (torso) angle (in degrees).
   const torsoAngleDeg = Math.abs(thetaRadRaw * (180 / Math.PI));
 
-  // --- JOINT POSITIONS ---
-  // Define joints in “math” coordinates (with y upward)
+  // Compute "shoulder height" as standing height: simply sum the lengths.
+  const shoulderHeight = parameters.shinLength + parameters.femurLength + parameters.torsoLength;
+
+  // Also compute the ratio of torso length to shin length.
+  const TS_ratio = parameters.torsoLength / parameters.shinLength;
+  // And the ratio between shin angle and back (torso) angle.
+  const angleRatio = torsoAngleDeg !== 0 ? parameters.shinAngle / torsoAngleDeg : 0;
+
+  // --- JOINT POSITIONS (in math coordinates, with y upward) ---
   const joints = {
     ankle: { x: 0, y: 0 },
     knee: {
@@ -122,8 +147,8 @@ const SquatSimulator = () => {
   };
 
   // --- COORDINATE CONVERSION ---
-  // Convert “math” coordinates (with y upward) to SVG coordinates (with y downward)
-  // using an offset of 1.5 (mimicking transform="translate(0, 1.5) scale(1, -1)")
+  // Convert from math coordinates (y upward) to SVG coordinates (y downward)
+  // by offsetting y by 1.5 (mimicking transform="translate(0, 1.5) scale(1,-1)")
   const toSVGCoords = (point) => ({
     x: point.x,
     y: 1.5 - point.y
@@ -133,11 +158,10 @@ const SquatSimulator = () => {
   const svgHip      = toSVGCoords(joints.hip);
   const svgTorsoTop = toSVGCoords(joints.torsoTop);
 
-  // Ground (foot) line endpoints
+  // Ground (foot) line endpoints.
   const groundStart = toSVGCoords({ x: 0, y: 0 });
   const groundEnd   = toSVGCoords({ x: -parameters.feetLength, y: 0 });
-
-  // Center-of-mass guide line endpoints
+  // Center-of-mass guide endpoints.
   const comStart = toSVGCoords({ x: -parameters.feetLength / 2, y: 0 });
   const comEnd   = toSVGCoords({ x: -parameters.feetLength / 2, y: 2.0 });
 
@@ -149,14 +173,15 @@ const SquatSimulator = () => {
   };
 
   // --- SLIDER CONFIGURATION ---
-  // Reorder so that "Femur Length" is first and mark it to be bold.
+  // Femur Length is first (its label is bold). For the femur slider,
+  // we attach onMouseDown and onMouseUp events to capture the fixed ratios.
   const sliderConfigs = [
-    { label: "Femur Length (m)", key: "femurLength", min: 0.2, max: 0.7, step: 0.001, bold: true },
+    { label: "Femur Length (m)", key: "femurLength", min: 0.25, max: 0.65, step: 0.001, bold: true },
     { label: "Thigh Angle (°)", key: "thighAngle", min: 0, max: 180, step: 0.1 },
     { label: "Shin Angle (°)", key: "shinAngle", min: -5, max: 90, step: 0.1 },
-    { label: "Torso Length (m)", key: "torsoLength", min: 0.20, max: 0.85, step: 0.001 },
-    { label: "Shin Length (m)", key: "shinLength", min: 0.13, max: 0.73, step: 0.001 },
-    { label: "Feet Length (m)", key: "feetLength", min: 0.11, max: 0.49, step: 0.001 }
+    { label: "Torso Length (m)", key: "torsoLength", min: 0.30, max: 0.75, step: 0.001 },
+    { label: "Shin Length (m)", key: "shinLength", min: 0.23, max: 0.63, step: 0.001 },
+    { label: "Feet Length (m)", key: "feetLength", min: 0.11, max: 0.39, step: 0.001 }
   ];
 
   return (
@@ -188,6 +213,29 @@ const SquatSimulator = () => {
               value={parameters[config.key]}
               onChange={(e) => updateParameter(config.key, e.target.value)}
               className="w-full"
+              {...(config.key === "femurLength" ? {
+                onMouseDown: () => {
+                  // Capture fixed ratios at the start of the femur drag.
+                  const phi_current = parameters.thighAngle * Math.PI / 180;
+                  const psi_current = (-parameters.shinAngle * Math.PI) / 180;
+                  const currentRatio = (-parameters.feetLength / 2 -
+                                        parameters.shinLength * Math.sin(psi_current) -
+                                        parameters.femurLength * Math.sin(phi_current)) / parameters.torsoLength;
+                  const theta_current = Math.asin(Math.max(-1, Math.min(1, currentRatio)));
+                  const backAngleDeg = Math.abs(theta_current * (180/Math.PI));
+                  femurDragRatio.current = backAngleDeg !== 0
+                    ? parameters.shinAngle / backAngleDeg
+                    : initialValues.current.R_shin;
+                  femurDragTSRatio.current = parameters.torsoLength / parameters.shinLength;
+                  // For standing shoulder height, simply sum the lengths.
+                  femurDragShoulderHeight.current = parameters.shinLength + parameters.femurLength + parameters.torsoLength;
+                },
+                onMouseUp: () => {
+                  femurDragRatio.current = null;
+                  femurDragTSRatio.current = null;
+                  femurDragShoulderHeight.current = null;
+                }
+              } : {})}
             />
           </div>
         ))}
@@ -197,12 +245,21 @@ const SquatSimulator = () => {
 
       {/* Calculated Outputs */}
       <div className="mb-6">
-        <h3 className="text-xl font-semibold mb-2">Calculated Angles:</h3>
+        <h3 className="text-xl font-semibold mb-2">Calculated Angles & Ratios:</h3>
         <p className="mb-2">
           <strong>Torso (Back) Angle:</strong> {torsoAngleDeg.toFixed(2)}°
         </p>
-        <p>
+        <p className="mb-2">
           <strong>Backward Lean (at ankle):</strong> {parameters.shinAngle.toFixed(2)}°
+        </p>
+        <p className="mb-2">
+          <strong>Standing Shoulder Height:</strong> {shoulderHeight.toFixed(3)} m
+        </p>
+        <p className="mb-2">
+          <strong>Torso Length : Shin Length Ratio:</strong> {TS_ratio.toFixed(3)}
+        </p>
+        <p className="mb-2">
+          <strong>Shin Angle / Torso Angle Ratio:</strong> {angleRatio.toFixed(3)}
         </p>
       </div>
 
@@ -224,7 +281,7 @@ const SquatSimulator = () => {
           strokeWidth="0.02"
         />
 
-        {/* Center of mass guide */}
+        {/* Center-of-mass guide */}
         <line
           id="com-guide"
           x1={comStart.x}
