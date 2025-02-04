@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/SquatsSimulator/static/css/main.f855e6bc.css",
+    "main.js": "/SquatsSimulator/static/js/main.e022f018.js",
+    "static/js/488.1539e19b.chunk.js": "/SquatsSimulator/static/js/488.1539e19b.chunk.js",
+    "index.html": "/SquatsSimulator/index.html",
+    "main.f855e6bc.css.map": "/SquatsSimulator/static/css/main.f855e6bc.css.map",
+    "main.e022f018.js.map": "/SquatsSimulator/static/js/main.e022f018.js.map",
+    "488.1539e19b.chunk.js.map": "/SquatsSimulator/static/js/488.1539e19b.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.f855e6bc.css",
+    "static/js/main.e022f018.js"
+  ]
+}
