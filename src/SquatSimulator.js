@@ -82,9 +82,6 @@ const SquatSimulator = () => {
         <strong>Torso (Back) Angle:</strong> {torsoAngleDeg.toFixed(2)}°
       </p>
       <p>
-        <strong>Backward Lean (at ankle):</strong> {parameters.shinAngle.toFixed(2)}°
-      </p>
-      <p>
         <strong>Standing Shoulder Height:</strong> {shoulderHeight.toFixed(3)} m
       </p>
       <p>
