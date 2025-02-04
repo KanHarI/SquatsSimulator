@@ -124,7 +124,7 @@ const SquatSimulator = () => {
                 onChange={(e) => updateParameter(config.key, e.target.value)}
                 className="slider-input"
                 {...(config.key === "femurLength" ? {
-                  onMouseDown: () => {
+                  onPointerDown: () => {
                     const phi_current = parameters.thighAngle * Math.PI / 180;
                     const psi_current = (-parameters.shinAngle * Math.PI) / 180;
                     const currentRatio = (-parameters.feetLength / 2 -
@@ -139,7 +139,7 @@ const SquatSimulator = () => {
                     femurDragTSRatio.current = parameters.torsoLength / parameters.shinLength;
                     femurDragShoulderHeight.current = parameters.shinLength + parameters.femurLength + parameters.torsoLength;
                   },
-                  onMouseUp: () => {
+                  onPointerUp: () => {
                     femurDragRatio.current = null;
                     femurDragTSRatio.current = null;
                     femurDragShoulderHeight.current = null;
