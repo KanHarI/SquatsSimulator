@@ -5,6 +5,7 @@ import {
   calculateAnglesAndJoints,
   toSVGCoords
 } from './squatSimulatorCalculations';
+import './SquatSimulator.css';
 
 const SquatSimulator = () => {
   const initialValues = useRef(calculateInitialValues());
@@ -65,10 +66,6 @@ const SquatSimulator = () => {
     preserveAspectRatio: "xMidYMid meet"
   };
 
-  // Keep calculations logic in sync with imported helper functions
-  // No changes needed to calculation functions as they work independently
-  // of the UI layout
-
   const sliderConfigs = [
     { label: "Femur Length (m)", key: "femurLength", min: 0.25, max: 0.65, step: 0.001, bold: true },
     { label: "Thigh Angle (°)", key: "thighAngle", min: 0, max: 180, step: 0.1 },
@@ -79,27 +76,36 @@ const SquatSimulator = () => {
   ];
 
   const CalculatedOutputs = () => (
-    <div className="space-y-2">
-      <h3 className="text-xl font-semibold mb-2">Calculated Angles & Ratios:</h3>
-      <p><strong>Torso (Back) Angle:</strong> {torsoAngleDeg.toFixed(2)}°</p>
-      <p><strong>Backward Lean (at ankle):</strong> {parameters.shinAngle.toFixed(2)}°</p>
-      <p><strong>Standing Shoulder Height:</strong> {shoulderHeight.toFixed(3)} m</p>
-      <p><strong>Torso Length : Shin Length Ratio:</strong> {TS_ratio.toFixed(3)}</p>
-      <p><strong>Shin Angle / Torso Angle Ratio:</strong> {angleRatio.toFixed(3)}</p>
+    <div className="calculated-outputs">
+      <h3 className="calculated-header">Calculated Angles &amp; Ratios:</h3>
+      <p>
+        <strong>Torso (Back) Angle:</strong> {torsoAngleDeg.toFixed(2)}°
+      </p>
+      <p>
+        <strong>Backward Lean (at ankle):</strong> {parameters.shinAngle.toFixed(2)}°
+      </p>
+      <p>
+        <strong>Standing Shoulder Height:</strong> {shoulderHeight.toFixed(3)} m
+      </p>
+      <p>
+        <strong>Torso Length : Shin Length Ratio:</strong> {TS_ratio.toFixed(3)}
+      </p>
+      <p>
+        <strong>Shin Angle / Torso Angle Ratio:</strong> {angleRatio.toFixed(3)}
+      </p>
     </div>
   );
 
   return (
-    <div className="max-w-7xl mx-auto p-4 font-sans">
-      <h2 className="text-2xl font-bold mb-4">Squat Simulator</h2>
+    <div className="squat-simulator">
+      <h2 className="header">Squat Simulator</h2>
 
-      {/* Desktop: Side-by-side controls and calculations, Mobile: Stacked */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Controls */}
-        <div className="space-y-4">
+      {/* Top Section: Controls & Calculations */}
+      <div className="top-section">
+        <div className="controls">
           {sliderConfigs.map(config => (
-            <div key={config.key} className="flex flex-col">
-              <label className="mb-1">
+            <div key={config.key} className="slider-control">
+              <label className="slider-label">
                 {config.bold ? (
                   <strong>
                     {config.label}: {parameters[config.key].toFixed(3)}
@@ -119,17 +125,17 @@ const SquatSimulator = () => {
                 step={config.step}
                 value={parameters[config.key]}
                 onChange={(e) => updateParameter(config.key, e.target.value)}
-                className="w-full"
+                className="slider-input"
                 {...(config.key === "femurLength" ? {
                   onMouseDown: () => {
                     const phi_current = parameters.thighAngle * Math.PI / 180;
                     const psi_current = (-parameters.shinAngle * Math.PI) / 180;
                     const currentRatio = (-parameters.feetLength / 2 -
-                                        parameters.shinLength * Math.sin(psi_current) -
-                                        parameters.femurLength * Math.sin(phi_current)) /
-                                        parameters.torsoLength;
+                      parameters.shinLength * Math.sin(psi_current) -
+                      parameters.femurLength * Math.sin(phi_current)) /
+                      parameters.torsoLength;
                     const theta_current = Math.asin(Math.max(-1, Math.min(1, currentRatio)));
-                    const backAngleDeg = Math.abs(theta_current * (180/Math.PI));
+                    const backAngleDeg = Math.abs(theta_current * (180 / Math.PI));
                     femurDragRatio.current = backAngleDeg !== 0
                       ? parameters.shinAngle / backAngleDeg
                       : initialValues.current.R_shin;
@@ -147,19 +153,16 @@ const SquatSimulator = () => {
           ))}
         </div>
 
-        {/* Calculations */}
-        <CalculatedOutputs />
+        <div className="calculations">
+          <CalculatedOutputs />
+        </div>
       </div>
 
-      <hr className="my-6" />
+      <hr className="separator" />
 
       {/* SVG Visualization */}
-      <div className="w-full max-w-3xl mx-auto">
-        <svg
-          {...svgConfig}
-          className="w-full border border-gray-300"
-          style={{ minHeight: '400px', maxHeight: '600px' }}
-        >
+      <div className="visualization-container">
+        <svg {...svgConfig} className="visualization-svg">
           <line
             id="foot-base"
             x1={groundStart.x}
@@ -214,7 +217,7 @@ const SquatSimulator = () => {
           ))}
         </svg>
 
-        <p className="text-center mt-2 text-sm text-gray-600">
+        <p className="legend">
           Visualization Legend: Blue = Shin, Red = Femur, Green = Torso, Brown = Foot
         </p>
       </div>

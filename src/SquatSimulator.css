@@ -1,0 +1,96 @@
+/* Container styling */
+.squat-simulator {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+  font-family: Arial, sans-serif;
+}
+
+/* Header */
+.header {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 16px;
+}
+
+/* Top section: by default stacked (mobile) */
+.top-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+/* On desktop, display controls and calculations side-by-side */
+@media (min-width: 1024px) {
+  .top-section {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  .controls,
+  .calculations {
+    flex: 1;
+  }
+  .controls {
+    margin-right: 24px;
+  }
+}
+
+/* Slider control styles (now in a single line) with reduced spacing */
+.slider-control {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px; /* Reduced from 16px */
+}
+
+.slider-label {
+  margin-right: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.slider-input {
+  flex-grow: 1;
+}
+
+/* Calculated outputs: denser vertical spacing */
+.calculated-outputs {
+  line-height: 1.2;
+}
+
+.calculated-outputs p {
+  margin: 2px 0;
+}
+
+.calculated-header {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+/* Separator */
+.separator {
+  margin: 24px 0;
+  border: none;
+  border-top: 1px solid #ccc;
+}
+
+/* Visualization styles */
+.visualization-container {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.visualization-svg {
+  width: 100%;
+  border: 1px solid #ccc;
+  display: block;
+  margin: 0 auto;
+}
+
+.legend {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #666;
+}
