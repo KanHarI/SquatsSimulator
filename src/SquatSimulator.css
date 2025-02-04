@@ -62,6 +62,7 @@
   margin: 2px 0;
 }
 
+/* Header for calculated outputs */
 .calculated-header {
   font-size: 20px;
   font-weight: bold;
@@ -93,4 +94,40 @@
   margin-top: 8px;
   font-size: 14px;
   color: #666;
+}
+
+/* --- Mobile Adjustments --- */
+/* For screens narrower than 1024px, reduce font sizes and margins for the top two slots */
+@media (max-width: 1023px) {
+  /* Reduce the font size of the controls and calculated outputs to 70% */
+  .controls,
+  .calculations {
+    font-size: 70%;
+  }
+
+  /* Reduce overall padding */
+  .squat-simulator {
+    padding: 8px;
+  }
+
+  /* Reduce gap between the top section elements */
+  .top-section {
+    gap: 12px;
+  }
+
+  /* Further reduce spacing between slider controls */
+  .slider-control {
+    margin-bottom: 4px;
+  }
+
+  /* Reduce the separator margin */
+  .separator {
+    margin: 12px 0;
+  }
+  
+  /* Reduce spacing around the calculated header */
+  .calculated-header {
+    margin-top: 0;
+    margin-bottom: 2px;
+  }
 }
