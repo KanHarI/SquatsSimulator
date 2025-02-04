@@ -100,7 +100,7 @@ const SquatSimulator = () => {
     <div className="squat-simulator">
       <h2 className="header">Squat Simulator</h2>
 
-      {/* Top Section: Controls & Calculations */}
+      {/* Top Section for Desktop: Controls and Calculated outputs side-by-side */}
       <div className="top-section">
         <div className="controls">
           {sliderConfigs.map(config => (
@@ -153,7 +153,8 @@ const SquatSimulator = () => {
           ))}
         </div>
 
-        <div className="calculations">
+        {/* Desktop Calculated Outputs (hidden on mobile) */}
+        <div className="calculations desktop-only">
           <CalculatedOutputs />
         </div>
       </div>
@@ -220,6 +221,11 @@ const SquatSimulator = () => {
         <p className="legend">
           Visualization Legend: Blue = Shin, Red = Femur, Green = Torso, Brown = Foot
         </p>
+      </div>
+
+      {/* Mobile Calculated Outputs (shown only on mobile) */}
+      <div className="calculations mobile-only">
+        <CalculatedOutputs />
       </div>
     </div>
   );

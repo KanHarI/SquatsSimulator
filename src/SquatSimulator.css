@@ -96,10 +96,25 @@
   color: #666;
 }
 
-/* --- Mobile Adjustments --- */
-/* For screens narrower than 1024px, reduce font sizes and margins for the top two slots */
+/* --- Visibility Helpers --- */
+.desktop-only {
+  display: none;
+}
+
+.mobile-only {
+  display: none;
+}
+
+/* --- Desktop (min-width:1024px) --- */
+@media (min-width: 1024px) {
+  .desktop-only {
+    display: block;
+  }
+}
+
+/* --- Mobile Adjustments (max-width:1023px) --- */
 @media (max-width: 1023px) {
-  /* Reduce the font size of the controls and calculated outputs to 70% */
+  /* Reduce the font size of the controls and calculations to 70% */
   .controls,
   .calculations {
     font-size: 70%;
@@ -128,5 +143,10 @@
   /* Hide the Calculated Angles & Ratios header entirely on mobile */
   .calculated-header {
     display: none;
+  }
+  
+  /* Show the mobile-only calculations and hide the desktop-only version */
+  .mobile-only {
+    display: block;
   }
 }
