@@ -62,7 +62,7 @@
   margin: 2px 0;
 }
 
-/* Header for calculated outputs */
+/* Calculated outputs header */
 .calculated-header {
   font-size: 20px;
   font-weight: bold;
@@ -125,9 +125,8 @@
     margin: 12px 0;
   }
   
-  /* Reduce spacing around the calculated header */
+  /* Hide the Calculated Angles & Ratios header entirely on mobile */
   .calculated-header {
-    margin-top: 0;
-    margin-bottom: 2px;
+    display: none;
   }
 }
