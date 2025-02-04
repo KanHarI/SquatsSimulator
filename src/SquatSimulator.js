@@ -5,7 +5,7 @@ const SquatSimulator = () => {
   // These values serve as a fallback if no drag is in progress.
   const initialValues = useRef((() => {
     const initial = {
-      thighAngle: 95,      // degrees from vertical
+      thighAngle: 90,      // degrees from vertical
       shinAngle: 45,       // degrees from vertical
       torsoLength: 0.50,   // meters
       femurLength: 0.48,   // meters
@@ -24,7 +24,7 @@ const SquatSimulator = () => {
     // Preserve original torso and shin lengths
     const T0 = initial.torsoLength;
     const S0 = initial.shinLength;
-    // Fixed ratio between shin angle and back angle (in degrees)
+    // Fixed ratio between shin angle and back (torso) angle (in degrees)
     const R_shin = initial.shinAngle / Math.abs(theta0 * (180/Math.PI));
     return { ...initial, psi0, phi, theta0, H0, T0, S0, R_shin };
   })());
@@ -49,14 +49,23 @@ const SquatSimulator = () => {
   //   (i) the ratio (shinAngle)/(backAngle) remains fixed,
   //   (ii) the ratio torsoLength/shinLength remains fixed, and
   //   (iii) the standing shoulder height (shinLength+femurLength+torsoLength) remains constant.
+  // In this implementation we first compute newShin and newTorso from the standing height,
+  // then solve (by bisection) for x₍deg₎, the absolute back (torso) angle in degrees, from:
+  //
+  //   newShin*sin(R_fixed*x_deg*pi/180)
+  //   + newTorso*sin(x_deg*pi/180)
+  //   - newFemur*sin(phi)
+  //   - feetLength/2  = 0.
+  //
+  // Finally, we set the new shin angle = R_fixed*x_deg.
   const updateParameter = (key, value) => {
     const numValue = Number(value);
     if (key === "femurLength") {
       const newFemur = numValue;
-      const { phi } = initialValues.current; // thigh angle (radians) is assumed constant
+      const { phi } = initialValues.current; // thigh angle in radians (assumed constant)
       const feetLength = parameters.feetLength; // assume feetLength is unchanged
 
-      // If the femur drag fixed numbers have not been captured, use initial values.
+      // Get the fixed ratios (captured on drag start) or fall back to initial values.
       const R_fixed = femurDragRatio.current !== null
                         ? femurDragRatio.current
                         : initialValues.current.R_shin;
@@ -67,34 +76,41 @@ const SquatSimulator = () => {
                         ? femurDragShoulderHeight.current
                         : initialValues.current.H0;
 
-      // We'll solve for new shin length, new torso length, and new shin angle
-      // such that:
-      // (1) newTorso / newShin = TS_fixed,
-      // (2) newShinAngle = R_fixed * |backAngle (in °)|, where
-      //     backAngle = θ = asin( (-feetLength/2 - newShin*sin(psi_new) - newFemur*sin(phi)) / newTorso ),
-      //     with psi_new = -newShinAngle*(π/180), and
-      // (3) newShin + newFemur + newTorso equals H_fixed.
-      //
-      // We use fixed-point iteration. Initialize:
-      let newShinAngle = parameters.shinAngle;
-      let newShin = parameters.shinLength;
-      let newTorso = TS_fixed * newShin; // from (1)
-      let theta_candidate = 0;
-      for (let i = 0; i < 10; i++) {
-        const psi_new = - newShinAngle * Math.PI / 180;
-        newTorso = TS_fixed * newShin;
-        const expr = (-feetLength / 2 - newShin * Math.sin(psi_new) - newFemur * Math.sin(phi)) / newTorso;
-        const clampedExpr = Math.max(-1, Math.min(1, expr));
-        theta_candidate = Math.asin(clampedExpr); // back (torso) angle (radians)
-        const newShinAngle_new = R_fixed * Math.abs(theta_candidate * (180/Math.PI));
-        // Compute current shoulder height candidate (standing height = sum of lengths).
-        const H_candidate = newShin + newFemur + newTorso;
-        // Scale newShin so that the shoulder height approaches H_fixed.
-        const scale = H_fixed / H_candidate;
-        newShin = newShin * scale;
-        newShinAngle = newShinAngle_new;
+      // (1) Compute newShin and newTorso from the height constraint:
+      // newShin + newFemur + newTorso = H_fixed with newTorso = TS_fixed * newShin.
+      const newShin = (H_fixed - newFemur) / (1 + TS_fixed);
+      const newTorso = TS_fixed * newShin;
+
+      // (2) Solve for x_deg (the absolute back angle in degrees).
+      // We want to find x_deg such that:
+      //    newShin*sin(R_fixed*x_deg*pi/180)
+      //  + newTorso*sin(x_deg*pi/180)
+      //  - newFemur*sin(phi)
+      //  - feetLength/2 = 0.
+      const f = (x_deg) => {
+        return newShin * Math.sin(R_fixed * x_deg * Math.PI/180) +
+               newTorso * Math.sin(x_deg * Math.PI/180) -
+               newFemur * Math.sin(phi) -
+               feetLength / 2;
+      };
+
+      // Use bisection in degrees. We expect a solution in [0, 90].
+      let low = 0;
+      let high = 90;
+      let x_deg = 0;
+      for (let i = 0; i < 30; i++) {
+        x_deg = (low + high) / 2;
+        const f_mid = f(x_deg);
+        if (Math.abs(f_mid) < 1e-6) break;
+        if (f(low) * f_mid < 0) {
+          high = x_deg;
+        } else {
+          low = x_deg;
+        }
       }
-      newTorso = TS_fixed * newShin; // final update
+      // (3) The new shin angle (in degrees) is given by:
+      const newShinAngle = R_fixed * x_deg;
+      // (Note: the back (torso) angle in radians is -x_deg*pi/180; here we keep only its magnitude.)
 
       setParameters(prev => ({
         ...prev,
