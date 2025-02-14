@@ -100,52 +100,27 @@ const SquatSimulator = () => {
     const startTime = Date.now();
     const duration = 2000; // Duration for one squat (up and down) in milliseconds
     const cycles = 3; // Number of squat cycles
-    const totalDuration = duration * cycles;
-    
-    // Start and end in squatted position
-    const squattedThighAngle = parameters.thighAngle;
-    const squattedShinAngle = parameters.shinAngle;
-    const standingThighAngle = 0; // Standing position
-    const standingShinAngle = 0; // Standing position
-    
-    // Calculate the difference in angles to maintain proportional movement
-    const thighAngleRange = squattedThighAngle - standingThighAngle;
-    const shinAngleRange = squattedShinAngle - standingShinAngle;
-
-    // Function to calculate smooth acceleration progress for the full cycle
-    const calculateSmoothProgress = (t) => {
-      // Convert progress to angle in radians (0 to 2π)
-      const angle = t * 2 * Math.PI;
-      // Use cosine function shifted and scaled to go from 0 to 1 to 0
-      // cos goes from 1 to -1, so we invert, scale to 0.5 and shift up
-      return (1 - Math.cos(angle)) / 2;
-    };
 
     const animate = () => {
       const currentTime = Date.now() - startTime;
-      const progress = currentTime / totalDuration;
+      const { isComplete, currentThighAngle, currentShinAngle } = calculateAnimationFrame(
+        currentTime,
+        startTime,
+        duration,
+        cycles,
+        parameters.thighAngle,
+        parameters.shinAngle
+      );
 
-      if (progress >= 1) {
-        // End in squatted position
+      if (isComplete) {
         setParameters(prev => ({
           ...prev,
-          thighAngle: squattedThighAngle,
-          shinAngle: squattedShinAngle
+          thighAngle: parameters.thighAngle,
+          shinAngle: parameters.shinAngle
         }));
         stopAnimation();
         return;
       }
-
-      // Calculate the current cycle progress (0 to 1)
-      const cycleProgress = (currentTime % duration) / duration;
-      
-      // Apply smooth acceleration to the cycle progress
-      const smoothProgress = calculateSmoothProgress(cycleProgress);
-      
-      // Calculate angles using the smooth sinusoidal motion
-      // smoothProgress goes from 0 (squatted) to 1 (standing) and back to 0 (squatted)
-      const currentThighAngle = squattedThighAngle - (thighAngleRange * smoothProgress);
-      const currentShinAngle = squattedShinAngle - (shinAngleRange * smoothProgress);
 
       setParameters(prev => ({
         ...prev,
