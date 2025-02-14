@@ -13,6 +13,48 @@
   margin-bottom: 16px;
 }
 
+/* Animation controls */
+.animation-controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.animate-button, .reset-button {
+  padding: 10px 20px;
+  font-size: 16px;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.animate-button {
+  background-color: #4CAF50;
+}
+
+.animate-button:hover {
+  background-color: #45a049;
+}
+
+.animate-button:active {
+  background-color: #3d8b40;
+}
+
+.reset-button {
+  background-color: #f44336;
+}
+
+.reset-button:hover {
+  background-color: #da190b;
+}
+
+.reset-button:active {
+  background-color: #c41810;
+}
+
 /* Top section: by default stacked (mobile) */
 .top-section {
   display: flex;
