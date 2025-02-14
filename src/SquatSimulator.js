@@ -3,6 +3,7 @@ import {
   calculateInitialValues,
   calculateFemurLengthUpdate,
   calculateAnglesAndJoints,
+  calculateAnimationFrame,
   toSVGCoords
 } from './squatSimulatorCalculations';
 import './SquatSimulator.css';
