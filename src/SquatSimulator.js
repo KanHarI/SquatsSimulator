@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   calculateInitialValues,
   calculateFemurLengthUpdate,
   calculateAnglesAndJoints,
+  calculateAnimationFrame,
   toSVGCoords
 } from './squatSimulatorCalculations';
 import './SquatSimulator.css';
@@ -12,6 +13,8 @@ const SquatSimulator = () => {
   const femurDragRatio = useRef(null);
   const femurDragTSRatio = useRef(null);
   const femurDragShoulderHeight = useRef(null);
+  const animationRef = useRef(null);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   const [parameters, setParameters] = useState({
     thighAngle: initialValues.current.thighAngle,
@@ -23,6 +26,11 @@ const SquatSimulator = () => {
   });
 
   const updateParameter = (key, value) => {
+    // Stop animation if any slider is modified
+    if (isAnimating) {
+      stopAnimation();
+    }
+
     const numValue = Number(value);
     if (key === "femurLength") {
       const newFemur = numValue;
@@ -75,6 +83,58 @@ const SquatSimulator = () => {
     { label: "Feet Length (m)", key: "feetLength", min: 0.11, max: 0.39, step: 0.001 }
   ];
 
+  const stopAnimation = useCallback(() => {
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+    setIsAnimating(false);
+  }, []);
+
+  const animate = useCallback(() => {
+    if (isAnimating) {
+      stopAnimation();
+      return;
+    }
+
+    setIsAnimating(true);
+    const startTime = Date.now();
+    const duration = 2000; // Duration for one squat (up and down) in milliseconds
+    const cycles = 3; // Number of squat cycles
+
+    const animate = () => {
+      const currentTime = Date.now() - startTime;
+      const { isComplete, currentThighAngle, currentShinAngle } = calculateAnimationFrame(
+        currentTime,
+        startTime,
+        duration,
+        cycles,
+        parameters.thighAngle,
+        parameters.shinAngle
+      );
+
+      if (isComplete) {
+        setParameters(prev => ({
+          ...prev,
+          thighAngle: parameters.thighAngle,
+          shinAngle: parameters.shinAngle
+        }));
+        stopAnimation();
+        return;
+      }
+
+      setParameters(prev => ({
+        ...prev,
+        thighAngle: currentThighAngle,
+        shinAngle: currentShinAngle
+      }));
+
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animate();
+  }, [isAnimating, parameters.thighAngle, parameters.shinAngle, stopAnimation]);
+
   const CalculatedOutputs = () => (
     <div className="calculated-outputs">
       <h3 className="calculated-header">Calculated Angles &amp; Ratios:</h3>
@@ -96,6 +156,32 @@ const SquatSimulator = () => {
   return (
     <div className="squat-simulator">
       <h2 className="header">Squat Simulator</h2>
+      <div className="animation-controls">
+        <button 
+          onClick={animate}
+          className="animate-button"
+        >
+          {isAnimating ? 'Stop Animation' : 'Animate (3 Squats)'}
+        </button>
+        <button 
+          onClick={() => {
+            if (isAnimating) {
+              stopAnimation();
+            }
+            setParameters({
+              thighAngle: initialValues.current.thighAngle,
+              shinAngle: initialValues.current.shinAngle,
+              torsoLength: initialValues.current.torsoLength,
+              femurLength: initialValues.current.femurLength,
+              shinLength: initialValues.current.shinLength,
+              feetLength: initialValues.current.feetLength
+            });
+          }}
+          className="reset-button"
+        >
+          Reset
+        </button>
+      </div>
 
       {/* Top Section for Desktop: Controls and Calculated outputs side-by-side */}
       <div className="top-section">

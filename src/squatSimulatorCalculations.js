@@ -76,6 +76,58 @@ export const calculateFemurLengthUpdate = (
   return { newShin, newTorso, newShinAngle };
 };
 
+// Calculate smooth animation progress using cosine function
+export const calculateSmoothProgress = (t) => {
+  // Convert progress to angle in radians (0 to 2π)
+  const angle = t * 2 * Math.PI;
+  // Use cosine function shifted and scaled to go from 0 to 1 to 0
+  // cos goes from 1 to -1, so we invert, scale to 0.5 and shift up
+  return (1 - Math.cos(angle)) / 2;
+};
+
+// Calculate animation frame parameters
+export const calculateAnimationFrame = (
+  currentTime,
+  startTime,
+  duration,
+  cycles,
+  squattedThighAngle,
+  squattedShinAngle,
+  standingThighAngle = 0,
+  standingShinAngle = 0
+) => {
+  const totalDuration = duration * cycles;
+  const progress = currentTime / totalDuration;
+  
+  if (progress >= 1) {
+    return {
+      isComplete: true,
+      currentThighAngle: squattedThighAngle,
+      currentShinAngle: squattedShinAngle
+    };
+  }
+
+  // Calculate the current cycle progress (0 to 1)
+  const cycleProgress = (currentTime % duration) / duration;
+  
+  // Apply smooth acceleration to the cycle progress
+  const smoothProgress = calculateSmoothProgress(cycleProgress);
+  
+  // Calculate the angle ranges
+  const thighAngleRange = squattedThighAngle - standingThighAngle;
+  const shinAngleRange = squattedShinAngle - standingShinAngle;
+
+  // Calculate current angles using smooth sinusoidal motion
+  const currentThighAngle = squattedThighAngle - (thighAngleRange * smoothProgress);
+  const currentShinAngle = squattedShinAngle - (shinAngleRange * smoothProgress);
+
+  return {
+    isComplete: false,
+    currentThighAngle,
+    currentShinAngle
+  };
+};
+
 // Given the current parameters, calculate angles and joint positions.
 export const calculateAnglesAndJoints = (parameters) => {
   const phi = parameters.thighAngle * Math.PI / 180;
